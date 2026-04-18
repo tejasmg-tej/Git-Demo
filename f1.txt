@@ -1,0 +1,2 @@
+Hello we are leanring git and VI Editor
+We are in the git Bash terminal.
