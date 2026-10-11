@@ -1,0 +1,276 @@
+Big Data Analytics (BIS701)
+
+
+1. Develop a Map Reduce program for Matrix Multiplication.
+from collections import defaultdict
+
+def mapreduce(A,B):
+ d=defaultdict(list)
+ for i in range(len(A)):
+ for j in range(len(B[0])):
+ for k in range(len(B)):
+ d[i,j].append(A[i][k]*B[k][j])
+ return {key:sum(value) for key,value in d.items()}
+A=[[1,2,3],[4,5,6]]
+B=[[7,8],[9,10],[11,12]]
+R=mapreduce(A,B)
+for i in range(len(A)):
+ print([R[i,j] for j in range(len(B[0]))])
+
+
+====================================================================
+2. Develop a map reduce program that mines weather data and display appropriate message 
+indicating the weather conditions of the day.
+
+
+from collections import Counter
+data="""2024-04-01,Sunny
+2024-04-01,Rainy
+2024-04-01,Sunny
+2024-04-02,Cloudy
+2024-04-02,Cloudy
+2024-04-02,Rainy
+2024-04-03,Sunny"""
+def mapper(line):
+ return tuple(line.split(','))
+def reducer(data):
+ d={}
+ for date,weather in data:
+ d.setdefault(date,[]).append(weather)
+ for date,w in d.items():
+ print(f"Weather on {date}: {Counter(w).most_common(1)[0][0]}")
+mapped=[mapper(x) for x in data.splitlines()]
+reducer(mapped)
+========================= OR ===========================
+from collections import Counter
+def mapper(line):
+ return tuple(line.strip().split(','))def reducer(data):
+ d={}
+ for date,w in data:
+ d.setdefault(date,[]).append(w)
+ for date,w in d.items():
+ print(f"Weather on {date}: {Counter(w).most_common(1)[0][0]}")
+with open("weather.txt") as f:
+ data=[mapper(x) for x in f]
+reducer(data)
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+3. Develop a Map Reduce program to find the tags associated with each movie by analyzing movie 
+lens data.
+
+
+import csv
+movies={
+'1':'Toy Story',
+'2':'Jumanji',
+'3':'Grumpier Old Men'}
+tags=[
+['1','funny'],['1','animation'],['2','adventure'],
+['2','game'],['1','funny'],['3','romantic']]
+d={}
+for movie,tag in tags:
+ d.setdefault(movie,set()).add(tag)
+for movie,t in d.items():
+ print(f"Movie: {movies[movie]}, Tags: {', '.join(sorted(t))}")
+========================= OR ==========================
+import csv
+movies={}
+with open("movies.csv") as f:
+ for r in csv.DictReader(f):
+ movies[r["movieId"]]=r["title"]
+d={}
+with open("tags.csv") as f:
+ for r in csv.DictReader(f):
+ d.setdefault(r["movieId"],set()).add(r["tag"])
+for movie,tags in d.items():
+ print(f"Movie: {movies.get(movie,'Unknown Title')}, Tags: {', '.join(sorted(tags))}")
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+4. Implement functions: Count-Sort-Limit-Skip- Aggregate using mango DB.
+
+use experimentFivadb.createCollection("myCollection")
+for(let i=0;i<10000;i++)
+ db.myCollection.insertOne({
+ name:"Person"+i,
+ age:Math.floor(Math.random()*100),
+ city:["New York","Los Angeles","Chicago","Houston","Phoenix"][Math.floor(Math.random()*5)]
+ })
+db.myCollection.countDocuments()
+db.myCollection.find().sort({age:1}).limit(5)
+db.myCollection.find().skip(9999)
+db.myCollection.find().limit(2)
+db.myCollection.find({age:{$gt:50}})
+db.myCollection.aggregate([
+ {$group:{_id:"$city",count:{$sum:1}}},
+ {$sort:{count:-1}}
+])
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+5. Write a Pig Latin Scripts to sort, group, join, Project and filter the data.
+
+employees = LOAD '/user/cloudera/employees.txt' USING PigStorage(',')
+AS (id:int,name:chararray,age:int,dept:int,salary:int);
+departments = LOAD '/user/cloudera/departments.txt' USING PigStorage(',')
+AS (dept:int,dept_name:chararray);
+filtered = FILTER employees BY age > 28;
+projected = FOREACH filtered GENERATE id,name,salary;
+sorted = ORDER projected BY salary DESC;
+grouped = GROUP employees BY dept;
+joined = JOIN employees BY dept, departments BY dept;
+DUMP sorted;
+DUMP grouped;
+DUMP joined;
+---------------------------------------------------------------------------------------------------------------------------------------------------
+hdfs dfs -mkdir -p /user/cloudera
+hdfs dfs -put employees.txt /user/cloudera/
+hdfs dfs -put departments.txt /user/cloudera/
+pig -x mapreduce employee_analysis.pig
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+
+6. Use HIVE to create, alter, and drop databases, tables, views, functions and indexes.
+
+CREATE DATABASE employee_db;
+USE employee_db;
+ALTER DATABASE employee_db SET DBPROPERTIES ('Owner'='Admin');
+CREATE TABLE employees(
+ emp_id INT,
+ name STRING,
+ age INT,
+ dept_id INT,
+ salary FLOAT
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+LOAD DATA INPATH '/user/cloudera/employees.txt' INTO TABLE employees;
+ALTER TABLE employees ADD COLUMNS (email STRING);
+ALTER TABLE employees RENAME TO employees_new;
+ALTER TABLE employees_new RENAME TO employees;
+CREATE VIEW high_salary_employees AS
+SELECT emp_id,name,salary FROM employees WHERE salary>50000;
+ALTER VIEW high_salary_employees AS
+SELECT emp_id,name,age,salary FROM employees WHERE salary>60000;
+DROP VIEW high_salary_employees;
+ADD JAR /user/cloudera/custom_udf.jar;
+CREATE FUNCTION to_upper AS 'com.example.hiveudf.ToUpperUDF';
+SELECT to_upper(name) FROM employees;
+DROP FUNCTION to_upper;
+CREATE INDEX emp_dept_idx ON TABLE employees(dept_id)
+AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
+WITH DEFERRED REBUILD;
+ALTER INDEX emp_dept_idx ON employees REBUILD;
+DROP INDEX emp_dept_idx ON employees;
+DESCRIBE employees;
+SELECT * FROM employees LIMIT 5;
+SHOW TABLES;DROP TABLE employees;
+DROP DATABASE employee_db CASCADE;
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ADD JAR /user/cloudera/custom_udf.jar;
+CREATE FUNCTION to_upper AS 'com.example.hiveudf.ToUpperUDF';
+SELECT to_upper(name) FROM employees;
+DROP FUNCTION to_upper;
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+7. Implement word count program in Hadoop and spark Source Code.
+a) Hadoop MapReduce — WordCount.java
+
+import java.io.IOException;
+import java.util.StringTokenizer;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+public class WordCount {
+ public static class Map extends Mapper<Object,Text,Text,IntWritable> {
+ IntWritable one=new IntWritable(1);
+ Text word=new Text();
+ public void map(Object k,Text v,Context c) throws IOException,InterruptedException {
+ StringTokenizer s=new StringTokenizer(v.toString());
+ while(s.hasMoreTokens()) {
+ word.set(s.nextToken());
+ c.write(word,one);
+ }
+ }
+ }
+ public static class Reduce extends Reducer<Text,IntWritable,Text,IntWritable> {
+ public void reduce(Text k,Iterable<IntWritable> v,Context c)
+ throws IOException,InterruptedException {
+ int sum=0;
+ for(IntWritable x:v) sum+=x.get();
+ c.write(k,new IntWritable(sum));
+ }
+ }
+ public static void main(String[] a) throws Exception {
+ Job j=Job.getInstance(new Configuration(),"WordCount");
+ j.setJarByClass(WordCount.class);
+ j.setMapperClass(Map.class);
+ j.setCombinerClass(Reduce.class);
+ j.setReducerClass(Reduce.class); j.setOutputKeyClass(Text.class);
+ j.setOutputValueClass(IntWritable.class);
+ FileInputFormat.addInputPath(j,new Path(a[0]));
+ FileOutputFormat.setOutputPath(j,new Path(a[1]));
+ System.exit(j.waitForCompletion(true)?0:1);
+ }
+}
+---------------------------------------------------------------------------------------------------------------------------------------------------
+javac -classpath `hadoop classpath` -d . WordCount.java
+jar cf wc.jar WordCount*.class
+hdfs dfs -mkdir -p /user/cloudera/input
+hdfs dfs -put sample.txt /user/cloudera/input/
+hadoop jar wc.jar WordCount /user/cloudera/input /user/cloudera/output
+hdfs dfs -cat /user/cloudera/output/part-r-00000
+---------------------------------------------------------------------------------------------------------------------------------------------------
+b) PySpark Word Count — wordcount.py
+from pyspark.sql import SparkSession
+spark=SparkSession.builder.appName("WordCount").getOrCreate()
+f=spark.sparkContext.textFile("hdfs://localhost:9000/user/cloudera/input/sample.txt")
+wc=f.flatMap(lambda x:x.split()).map(lambda x:(x,1)).reduceByKey(lambda a,b:a+b)
+for w,c in wc.collect():
+ print(w,c)
+wc.saveAsTextFile("hdfs://localhost:9000/user/cloudera/output_spark")
+spark.stop()
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+8. Use CDH (Cloudera Distribution for Hadoop) and HUE (Hadoop User Interface) to analyze the data 
+and generate reports for sample data sets.
+
+
+sudo service cloudera-scm-server start
+sudo service cloudera-scm-agent start
+hdfs dfs -mkdir -p /user/cloudera/data
+hdfs dfs -put employees.csv /user/cloudera/data/
+---------------------------------------------------------------------------------------------------------------------------------------------------
+CREATE DATABASE IF NOT EXISTS company;
+USE company;
+CREATE TABLE employees(
+ id INT,
+ name STRING,
+ department STRING,
+ salary INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','STORED AS TEXTFILE;
+LOAD DATA INPATH '/user/cloudera/data/employees.csv' INTO TABLE employees;
+SELECT * FROM employees;
+SELECT department,MAX(salary) AS highest_salary
+FROM employees
+GROUP BY department;
+SELECT name,department,salary
+FROM employees
+WHERE salary>65000;
+SELECT department,COUNT(*) AS employee_count
+FROM employees
+GROUP BY department;
